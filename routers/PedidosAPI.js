@@ -41,102 +41,215 @@ router.get('/:id', (req, res) => {
   );
 });
 
-// PROBAR
+// Probar bien. -> Falta agregar created_at y update_at
 // ../pedidos/crear/{token}
-router.post('/crear/:token', async (req, res) => {
-	const errors = validationResult(req);
-	if (!errors.isEmpty()) {
-	  return res.status(422).json({
-		message: 'Error al crear el pedido',
-		errors: errors.array(),
-	  });
-	}
-  
-	const token = req.params.token;
-	const email = req.body.email;
-  
-	try {
-	  await db.beginTransaction(); // Iniciar transacción
-  
-	  // Verificar si existe una entrada en la tabla "tokenclientes" con el email y el token proporcionados
-	  const tokenQuery = 'SELECT COUNT(*) AS count FROM tokenclientes WHERE email = ? AND token = ?';
-	  const tokenParams = [email, token];
-	  const [tokenRows] = await db.query(tokenQuery, tokenParams);
-	  const count = tokenRows[0].count;
-  
-	  if (count === 0) {
-		await db.rollback(); // Revertir la transacción
-		return res.status(401).json({
-		  mensaje: 'Credenciales inválidas',
-		});
-	  }
-  
-	  // Guardar el pedido en la tabla correspondiente
-	  const descripcion = req.body.descripcion;
-	  const pedidoQuery = 'INSERT INTO pedidos (email, descripcion) VALUES (?, ?)';
-	  const pedidoParams = [email, descripcion];
-	  await db.query(pedidoQuery, pedidoParams);
-  
-	  const idsArray = req.body.ids.split('-');
-	  const insufficientStock = [];
-	  let noDisponible = false;
-  
-	  for (const element of idsArray) {
-		// Obtener el producto de la base de datos
-		const productoQuery = 'SELECT * FROM productos WHERE id = ?';
-		const productoParams = [element];
-		const [productoRows] = await db.query(productoQuery, productoParams);
-		const producto = productoRows[0];
-  
-		if (producto.stock > 0) {
-		  // Guardar el detalle del pedido en la tabla correspondiente
-		  const detallePedidoQuery = 'INSERT INTO detalle_pedidos (pedido_id, producto_id, precio) VALUES (?, ?, ?)';
-		  const detallePedidoParams = [pedidoId, element, producto.precio];
-		  await db.query(detallePedidoQuery, detallePedidoParams);
-  
-		  if (!producto.activo) {
-			noDisponible = true;
-		  }
-  
-		  // Reducir el stock del producto en la base de datos
-		  const updateStockQuery = 'UPDATE productos SET stock = stock - 1 WHERE id = ?';
-		  const updateStockParams = [element];
-		  await db.query(updateStockQuery, updateStockParams);
-		} else {
-		  insufficientStock.push(element);
-		}
-	  }
-  
-	  if (insufficientStock.length > 0) {
-		await db.rollback(); // Revertir la transacción
-		return res.status(422).json({
-		  mensaje: 'Error al crear el pedido',
-		  insufficientStock: insufficientStock,
-		});
-	  }
-  
-	  if (noDisponible) {
-		await db.rollback(); // Revertir la transacción
-		return res.status(422).json({
-		  mensaje: 'Error al crear el pedido',
-		  noDisponible: noDisponible,
-		});
-	  }
-  
-	  await db.commit(); // Confirmar la transacción
-  
-	  return res.json({
-		mensaje: 'Pedido creado con éxito',
-	  });
-	} catch (error) {
-	  await db.rollback(); // Revertir la transacción en caso de error
-  
-	  return res.status(500).json({
-		mensaje: 'Error al crear el pedido',
-	  });
-	}
+router.post('/crear/:token', (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(422).json({
+      message: 'Error al crear el pedido',
+      errors: errors.array(),
+    });
+  }
+
+  const { token } = req.params;
+  const email = req.body.email;
+
+  pool.connect((error, client, done) => {
+    if (error) {
+      throw error;
+    }
+
+    client.query('BEGIN', (error) => {
+      if (error) {
+        client.query('ROLLBACK', (rollbackError) => {
+          if (rollbackError) {
+            throw rollbackError;
+          }
+          throw error;
+        });
+      }
+
+      const tokenQuery = 'SELECT COUNT(*) AS count FROM tokenclientes WHERE email = $1 AND token = $2';
+      const tokenParams = [email, token];
+      client.query(tokenQuery, tokenParams, (error, tokenResult) => {
+        if (error) {
+          client.query('ROLLBACK', (rollbackError) => {
+            if (rollbackError) {
+              throw rollbackError;
+            }
+            throw error;
+          });
+        }
+
+        const count = tokenResult.rows[0].count;
+
+        if (count === 0) {
+          console.log("token invalido");
+          client.query('ROLLBACK', (rollbackError) => {
+            if (rollbackError) {
+              throw rollbackError;
+            }
+            return res.status(401).json({
+              mensaje: 'Credenciales inválidas',
+            });
+          });
+        }
+
+        const descripcion = req.body.descripcion;
+        const pedidoQuery = 'INSERT INTO pedidos (email, descripcion) VALUES ($1, $2) RETURNING id';
+        const pedidoParams = [email, descripcion];
+        client.query(pedidoQuery, pedidoParams, (error, pedidoResult) => {
+          if (error) {
+            client.query('ROLLBACK', (rollbackError) => {
+              if (rollbackError) {
+                throw rollbackError;
+              }
+              throw error;
+            });
+          }
+
+          const pedidoId = pedidoResult.rows[0].id;
+          const idsArray = req.body.ids.split('-');
+          const insufficientStock = [];
+          let noDisponible = false;
+          let queryCount = 0;
+
+          idsArray.forEach((element) => {
+            const productoQuery = 'SELECT * FROM productos WHERE id = $1';
+            const productoParams = [element];
+            client.query(productoQuery, productoParams, (error, productoResult) => {
+              if (error) {
+                client.query('ROLLBACK', (rollbackError) => {
+                  if (rollbackError) {
+                    throw rollbackError;
+                  }
+                  throw error;
+                });
+              }
+
+              const producto = productoResult.rows[0];
+
+              if (producto.stock > 0) {
+                const detallePedidoQuery = 'INSERT INTO detalle_pedidos (pedido_id, producto_id, precio) VALUES ($1, $2, $3)';
+                const detallePedidoParams = [pedidoId, element, producto.precio];
+                client.query(detallePedidoQuery, detallePedidoParams, (error) => {
+                  if (error) {
+                    client.query('ROLLBACK', (rollbackError) => {
+                      if (rollbackError) {
+                        throw rollbackError;
+                      }
+                      throw error;
+                    });
+                  }
+
+                  if (!producto.activo) {
+                    noDisponible = true;
+                  }
+
+                  const updateStockQuery = 'UPDATE productos SET stock = stock - 1 WHERE id = $1';
+                  const updateStockParams = [element];
+                  client.query(updateStockQuery, updateStockParams, (error) => {
+                    if (error) {
+                      client.query('ROLLBACK', (rollbackError) => {
+                        if (rollbackError) {
+                          throw rollbackError;
+                        }
+                        throw error;
+                      });
+                    }
+
+                    queryCount++;
+
+                    if (queryCount === idsArray.length) {
+                      if (insufficientStock.length > 0) {
+                        client.query('ROLLBACK', (rollbackError) => {
+                          if (rollbackError) {
+                            throw rollbackError;
+                          }
+                          return res.status(422).json({
+                            mensaje: 'Error al crear el pedido',
+                            insufficientStock: insufficientStock,
+                          });
+                        });
+                      } else if (noDisponible) {
+                        client.query('ROLLBACK', (rollbackError) => {
+                          if (rollbackError) {
+                            throw rollbackError;
+                          }
+                          return res.status(422).json({
+                            mensaje: 'Error al crear el pedido',
+                            noDisponible: noDisponible,
+                          });
+                        });
+                      } else {
+                        client.query('COMMIT', (error) => {
+                          if (error) {
+                            client.query('ROLLBACK', (rollbackError) => {
+                              if (rollbackError) {
+                                throw rollbackError;
+                              }
+                              throw error;
+                            });
+                          }
+                          return res.json({
+                            mensaje: 'Pedido creado con éxito',
+                          });
+                        });
+                      }
+                    }
+                  });
+                });
+              } else {
+                insufficientStock.push(element);
+                queryCount++;
+
+                if (queryCount === idsArray.length) {
+                  if (insufficientStock.length > 0) {
+                    client.query('ROLLBACK', (rollbackError) => {
+                      if (rollbackError) {
+                        throw rollbackError;
+                      }
+                      return res.status(422).json({
+                        mensaje: 'Error al crear el pedido',
+                        insufficientStock: insufficientStock,
+                      });
+                    });
+                  } else if (noDisponible) {
+                    client.query('ROLLBACK', (rollbackError) => {
+                      if (rollbackError) {
+                        throw rollbackError;
+                      }
+                      return res.status(422).json({
+                        mensaje: 'Error al crear el pedido',
+                        noDisponible: noDisponible,
+                      });
+                    });
+                  } else {
+                    client.query('COMMIT', (error) => {
+                      if (error) {
+                        client.query('ROLLBACK', (rollbackError) => {
+                          if (rollbackError) {
+                            throw rollbackError;
+                          }
+                          throw error;
+                        });
+                      }
+
+                      return res.json({
+                        mensaje: 'Pedido creado con éxito',
+                      });
+                    });
+                  }
+                }
+              }
+            });
+          });
+        });
+      });
+    });
   });
-  
+});
 
 // PROBAR.
 // PREGUNTAR: Antes usabamos /pedidos/id pero lo vemos que no es necesario porque no tenemos el id del cliente, si no el email en las cookies, podemos no agregarlo?
