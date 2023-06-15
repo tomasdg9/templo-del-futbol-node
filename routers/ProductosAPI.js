@@ -102,7 +102,7 @@ router.get('/:id', (req, res) => {
 
   const query = `
     SELECT *
-    FROM categorias
+    FROM productos
     WHERE id = $1
   `;
 
@@ -113,7 +113,7 @@ router.get('/:id', (req, res) => {
 
     if (results.rows.length === 0) {
       return res.status(404).json({
-        mensaje: 'Categoría no encontrada'
+        mensaje: 'Producto no encontrado'
       });
     }
 

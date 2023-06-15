@@ -11,39 +11,39 @@ router.get('/', (req, res) => {
       }
       res.json(results.rows);
     });
-  });
+});
   
 // ../categorias/{id}
 router.get('/:id', (req, res) => {
     const { id } = req.params;
     pool.query('SELECT * FROM categorias WHERE id = $1', [id], (error, results) => {
-      if (error) {
-        throw error;
-      }
-      const categorias = result.rows;
-      if(categorias.length == 0){
-        res.status(404).json({
-          mensaje: 'Categoria no encontrada'
-        });
-      } else 
-        res.json(results.rows);
+        if (error) {
+          throw error;
+        }
+        const categorias = result.rows;
+        if(categorias.length == 0){
+          res.status(404).json({
+            mensaje: 'Categoria no encontrada'
+          });
+        } else 
+          res.json(results.rows);
     });
-  });
+});
 
 // ../categorias/buscar/{name} -- OBS: Se rompe si se pasa name vacio, preguntar en la práctica.
 router.get('/buscar/:name', (req, res) => {
   const { name } = req.params;
     pool.query('SELECT * FROM categorias WHERE LOWER(nombre) = LOWER($1)', [name], (error, results) => {
-      if (error) {
-        throw error;
-      }
-      const categorias = result.rows;
-      if(categorias.length == 0){
-        res.status(404).json({
-          mensaje: 'Categoria no encontrada'
-        });
-      } else 
-        res.json(results.rows);
+        if (error) {
+          throw error;
+        }
+        const categorias = result.rows;
+        if(categorias.length == 0){
+          res.status(404).json({
+            mensaje: 'Categoria no encontrada'
+          });
+        } else 
+          res.json(results.rows);
     });
 });
   
