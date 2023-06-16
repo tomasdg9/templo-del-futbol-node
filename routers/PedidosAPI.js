@@ -1,13 +1,7 @@
-// validar el metodo crear pedido con el token que tiene en las cookies el cliente.
 const express = require('express');
 const pool = require('../db'); // Ruta relativa al archivo db.js
 const { validationResult } = require('express-validator');
 const router = express.Router();
-
-
-// ../pedidos/detalle/{id}/{email}/{token}
-// Debería retornar información sobre los productos que pidió el cliente en dicho pedido. 
-// Ver los detalles de un pedido en la aplicación de Laravel para guiarme.
 
 // ../pedidos/
 router.get('/', (req, res) => {
@@ -42,7 +36,6 @@ router.get('/:id', (req, res) => {
   );
 });
 
-// Probar bien. -> Falta agregar created_at y update_at
 // ../pedidos/crear/{token}
 router.post('/crear/:token', (req, res) => {
   const errors = validationResult(req);
@@ -253,7 +246,6 @@ router.post('/crear/:token', (req, res) => {
   });
 });
 
-// PROBAR.
 // PREGUNTAR: Antes usabamos /pedidos/id pero lo vemos que no es necesario porque no tenemos el id del cliente, si no el email en las cookies, podemos no agregarlo?
 // ../pedidos/email/{email}/{token} -> Solicita los pedidos de un cliente según su email. Se necesita el token.
 router.get('/email/:email/:token', (req, res) => {
@@ -290,33 +282,6 @@ router.get('/email/:email/:token', (req, res) => {
 });
 
 // ../pedidos/verdetalle/{id}
-/*router.get('/verdetalle/:id', (req, res) => {
-  const { id } = req.params;
-  pool.query('SELECT * FROM detalle_pedidos WHERE pedido_id = $1', [id], (error, results) => {
-    if (error) {
-      throw error;
-    }
-    if (results.rows.length > 0) {
-      const productIds = results.rows.map(row => row.producto_id);
-      pool.query(`
-        SELECT p.*, COUNT(*) as cantidadpedida
-        FROM productos p
-        INNER JOIN detalle_pedidos dp ON p.id = dp.producto_id
-        WHERE dp.pedido_id = $1
-        GROUP BY p.id
-      `, [id], (error2, results2) => {
-        if (error2) {
-          throw error2;
-        }
-        res.json(results2.rows);
-      });
-    } else {
-      res.status(404).json({
-        mensaje: 'No se encontró detalle para el pedido especificado'
-      });
-    }
-  });
-});*/
 router.get('/verdetalle/:id', (req, res) => {
   const { id } = req.params;
   pool.query('SELECT * FROM detalle_pedidos WHERE pedido_id = $1', [id], (error, results) => {
@@ -345,8 +310,6 @@ router.get('/verdetalle/:id', (req, res) => {
     }
   });
 });
-
-
 
 // ../pedidos/page/{page}
 router.get('/page/:page', (req, res) => {
