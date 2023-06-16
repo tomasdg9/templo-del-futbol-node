@@ -23,6 +23,7 @@ router.get('/', (req, res) => {
 router.get('/:id', (req, res) => {
   const { id } = req.params;
 
+// validar que sea un numero
   pool.query(
     'SELECT * FROM pedidos WHERE id = $1',
     [id],
@@ -97,8 +98,9 @@ router.post('/crear/:token', (req, res) => {
         }
 
         const descripcion = req.body.descripcion;
-        const pedidoQuery = 'INSERT INTO pedidos (email, descripcion) VALUES ($1, $2) RETURNING id';
-        const pedidoParams = [email, descripcion];
+		const fechaActual = new Date();
+        const pedidoQuery = 'INSERT INTO pedidos (email, descripcion, created_at, updated_at) VALUES ($1, $2, $3, $3) RETURNING id';
+        const pedidoParams = [email, descripcion, fechaActual];
         client.query(pedidoQuery, pedidoParams, (error, pedidoResult) => {
           if (error) {
             client.query('ROLLBACK', (rollbackError) => {
@@ -255,33 +257,96 @@ router.post('/crear/:token', (req, res) => {
 // PREGUNTAR: Antes usabamos /pedidos/id pero lo vemos que no es necesario porque no tenemos el id del cliente, si no el email en las cookies, podemos no agregarlo?
 // ../pedidos/email/{email}/{token} -> Solicita los pedidos de un cliente según su email. Se necesita el token.
 router.get('/email/:email/:token', (req, res) => {
-	const { email, token } = req.params;
-	pool.query('SELECT * FROM tokenclientes WHERE email = $1 and token = $2', [email, token], (error, results) => { // Valida si el email tiene el token correcto.
-		if (error) {
-        throw error;
-      }
-	  if(results.rows.length == 0) {
-		  res.status(404).json({
-			  mensaje: 'Token inválido'
-			});
-	 } else {
-		  pool.query('SELECT * FROM pedidos WHERE email = $1', [email], (error2, results2) => {
-		  if (error2) {
-			throw error2;
-		  }
-		  if(results2.rows.length > 0){
-		  res.json(results2.rows);
-		  } else{
-			  res.status(404).json({
-			  mensaje: 'Cliente no encontrado'
-			});
-		}
-		});
-	}
-	
-	});
-    
+  const { email, token } = req.params;
+  pool.query('SELECT * FROM tokenclientes WHERE email = $1 and token = $2', [email, token], (error, results) => { // Valida si el email tiene el token correcto.
+    if (error) {
+      throw error;
+    }
+    if (results.rows.length == 0) {
+      res.status(404).json({
+        mensaje: 'Token inválido'
+      });
+    } else {
+      pool.query(`
+        SELECT p.*, COUNT(dp.*) as cantidadproductos
+        FROM pedidos p
+        LEFT JOIN detalle_pedidos dp ON p.id = dp.pedido_id
+        WHERE p.email = $1
+        GROUP BY p.id
+      `, [email], (error2, results2) => {
+        if (error2) {
+          throw error2;
+        }
+        if (results2.rows.length > 0) {
+          res.json(results2.rows);
+        } else {
+          res.status(404).json({
+            mensaje: 'Cliente no encontrado'
+          });
+        }
+      });
+    }
+  });
 });
+
+// ../pedidos/verdetalle/{id}
+/*router.get('/verdetalle/:id', (req, res) => {
+  const { id } = req.params;
+  pool.query('SELECT * FROM detalle_pedidos WHERE pedido_id = $1', [id], (error, results) => {
+    if (error) {
+      throw error;
+    }
+    if (results.rows.length > 0) {
+      const productIds = results.rows.map(row => row.producto_id);
+      pool.query(`
+        SELECT p.*, COUNT(*) as cantidadpedida
+        FROM productos p
+        INNER JOIN detalle_pedidos dp ON p.id = dp.producto_id
+        WHERE dp.pedido_id = $1
+        GROUP BY p.id
+      `, [id], (error2, results2) => {
+        if (error2) {
+          throw error2;
+        }
+        res.json(results2.rows);
+      });
+    } else {
+      res.status(404).json({
+        mensaje: 'No se encontró detalle para el pedido especificado'
+      });
+    }
+  });
+});*/
+router.get('/verdetalle/:id', (req, res) => {
+  const { id } = req.params;
+  pool.query('SELECT * FROM detalle_pedidos WHERE pedido_id = $1', [id], (error, results) => {
+    if (error) {
+      throw error;
+    }
+    if (results.rows.length > 0) {
+      const productIds = results.rows.map(row => row.producto_id);
+      pool.query(`
+        SELECT pr.nombre as nombre_producto, c.nombre as nombre_categoria, dp.precio, pr.imagen, COUNT(*) as cantidadpedida
+        FROM productos pr
+        INNER JOIN detalle_pedidos dp ON pr.id = dp.producto_id
+        INNER JOIN categorias c ON pr.categoria_id = c.id
+        WHERE dp.pedido_id = $1
+        GROUP BY pr.id, c.nombre, dp.precio
+      `, [id], (error2, results2) => {
+        if (error2) {
+          throw error2;
+        }
+        res.json(results2.rows);
+      });
+    } else {
+      res.status(404).json({
+        mensaje: 'No se encontró detalle para el pedido especificado'
+      });
+    }
+  });
+});
+
+
 
 // ../pedidos/page/{page}
 router.get('/page/:page', (req, res) => {
