@@ -272,10 +272,10 @@ router.get('/email/:email/:token', (req, res) => {
         if (results2.rows.length > 0) {
           res.json(results2.rows);
         } else {
-          res.status(404).json({
-            mensaje: 'Cliente no encontrado'
-          });
-        }
+			res.status(401).json({
+				mensaje: 'El cliente no tiene pedidos.'
+			});
+		}
       });
     }
   });

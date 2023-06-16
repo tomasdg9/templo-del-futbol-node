@@ -139,7 +139,6 @@ async function enviarCorreo(destinatario, asunto, contenido) {
 // Se genera un token en la base de datos para cambiar la contraseña.
 router.post('/changepassword', (req, res) => {
   const { email } = req.body;
-
   // Inicia la transacción
   pool.connect((error, client, done) => {
     if (error) {
@@ -151,33 +150,48 @@ router.post('/changepassword', (req, res) => {
         if (error) {
           throw error;
         }
+		client.query('SELECT * FROM clientes WHERE email = $1', [email], (err, resu) => {
+			if (error) {
+				throw error;
+			}
+			if(resu.rows.length == 0) {
+				res.status(404).json({ message: 'No existe el cliente.' });
+			} else {
+				client.query('SELECT * FROM tokenpassword WHERE email = $1', [email], (error, results) => {
+				  if (error) {
+					throw error;
+				  }
 
-        // Verifica si ya existe un token activo para el cliente
-        client.query('SELECT * FROM tokenpassword WHERE email = $1', [email], (error, results) => {
-          if (error) {
-            throw error;
-          }
-
-          if (results.rows.length > 0) {
-            // Ya tiene un token activo
-            res.status(401).json({ message: 'Ya existe un token activo para el cliente.' });
-          } else {
-            // Crea un nuevo token
-            const token = crypto.randomBytes(16).toString('hex');
-            
-            // Inserta el token en la tabla "tokenpassword"
-            client.query('INSERT INTO tokenpassword (email, token) VALUES ($1, $2)', [email, token], (error) => {
-              if (error) {
-                throw error;
-              }
-              
-              /* Lógica de enviar mail */
-              enviarCorreo(email, 'Cambiar contraseña - El templo del Fútbol', 'Ingresa al siguiente link para cambiar la contraseña: http://localhost:3000/cambiarcontra/' + email + '/' + token);
-              
-              res.json({ message: 'Se envió un correo electrónico al cliente' });
-            });
-          }
-        });
+				  if (results.rows.length > 0) {
+					// Ya tiene un token activo
+					res.status(401).json({ message: 'Ya existe un token activo para el cliente.' });
+				  } else {
+					// Crea un nuevo token
+					const token = crypto.randomBytes(16).toString('hex');
+					
+					// Inserta el token en la tabla "tokenpassword"
+					client.query('INSERT INTO tokenpassword (email, token) VALUES ($1, $2)', [email, token], (error) => {
+					  if (error) {
+						throw error;
+					  }
+					  
+					  /* Lógica de enviar mail */
+					  enviarCorreo(email, 'Cambiar contraseña - El templo del Fútbol', 'Ingresa al siguiente link para cambiar la contraseña: http://localhost:3000/cambiar/' + email + '/' + token);
+					  
+					 client.query('COMMIT', (error) => {
+					  if (error) {
+						throw error;
+					  }
+					  
+					  res.json({ message: 'Se envió un correo electrónico al cliente' });
+					});
+				
+					  
+					});
+				  }
+				});
+			}
+		});
       });
     } catch (error) {
       // Si ocurre un error, realiza un rollback para deshacer la transacción
@@ -185,7 +199,6 @@ router.post('/changepassword', (req, res) => {
         if (rollbackError) {
           throw rollbackError;
         }
-
         throw error;
       });
     } finally {
@@ -240,7 +253,14 @@ router.post('/newpassword', (req, res) => {
                         throw error;
                       }
 
-                      res.status(200).json({ message: 'Contraseña actualizada exitosamente' });
+						client.query('COMMIT', (error) => {
+					  if (error) {
+						throw error;
+					  }
+					  
+					  res.status(200).json({ message: 'Contraseña actualizada exitosamente' });
+					});
+                      
                     }
                   );
                 }
