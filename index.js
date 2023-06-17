@@ -6,6 +6,7 @@ const productosRouter = require('./routers/ProductosAPI');
 const categoriasRouter = require('./routers/CategoriasAPI');
 const clientesRouter = require('./routers/ClienteAPI');
 const pedidosRouter = require('./routers/PedidosAPI');
+const mercadoPagoRouter = require('./routers/MercadoPagoAPI');
 
 const app = express();
 
@@ -21,6 +22,7 @@ app.use('/pedidos', pedidosRouter);
 app.use('/productos', productosRouter);
 app.use('/categorias', categoriasRouter);
 app.use('/clientes', clientesRouter);
+app.use('/mercadopago', mercadoPagoRouter);
 
 
 // para iniciar el servidor usar node index.js
