@@ -73,7 +73,11 @@ router.get('/buscarporcategoria/:nombre/:categoria', (req, res) => {
 //../productos/categoria/{id}
 router.get('/categoria/:id', (req, res) => {
   const { id } = req.params;
-
+  const idNumber = parseInt(id, 10);
+  if (isNaN(idNumber) || idNumber < 0) {
+    res.status(400).json({ mensaje: 'El ID debe ser un número mayor o igual a cero' });
+    return;
+  }
   const query = `
     SELECT *
     FROM productos
@@ -99,7 +103,11 @@ router.get('/categoria/:id', (req, res) => {
 //../productos/{id}
 router.get('/:id', (req, res) => {
   const { id } = req.params;
-
+  const idNumber = parseInt(id, 10);
+  if (isNaN(idNumber) || idNumber < 0) {
+    res.status(400).json({ mensaje: 'El ID debe ser un número mayor o igual a cero' });
+    return;
+  }
   const query = `
     SELECT *
     FROM productos

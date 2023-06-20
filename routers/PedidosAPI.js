@@ -16,11 +16,14 @@ router.get('/', (req, res) => {
 // ../pedidos/{id}
 router.get('/:id', (req, res) => {
   const { id } = req.params;
-
-// validar que sea un numero
+  const idNumber = parseInt(id, 10);
+  if (isNaN(idNumber) || idNumber < 0) {
+    res.status(400).json({ mensaje: 'El ID debe ser un número mayor o igual a cero' });
+    return;
+  }
   pool.query(
     'SELECT * FROM pedidos WHERE id = $1',
-    [id],
+    [idNumber],
     (error, results) => {
       if (error) {
         throw error;
@@ -35,6 +38,7 @@ router.get('/:id', (req, res) => {
     }
   );
 });
+
 
 // ../pedidos/crear/{token}
 router.post('/crear/:token', (req, res) => {
@@ -246,7 +250,6 @@ router.post('/crear/:token', (req, res) => {
   });
 });
 
-// PREGUNTAR: Antes usabamos /pedidos/id pero lo vemos que no es necesario porque no tenemos el id del cliente, si no el email en las cookies, podemos no agregarlo?
 // ../pedidos/email/{email}/{token} -> Solicita los pedidos de un cliente según su email. Se necesita el token.
 router.get('/email/:email/:token', (req, res) => {
   const { email, token } = req.params;
@@ -284,6 +287,11 @@ router.get('/email/:email/:token', (req, res) => {
 // ../pedidos/verdetalle/{id}
 router.get('/verdetalle/:id', (req, res) => {
   const { id } = req.params;
+  const idNumber = parseInt(id, 10);
+  if (isNaN(idNumber) || idNumber < 0) {
+    res.status(400).json({ mensaje: 'El ID debe ser un número mayor o igual a cero' });
+    return;
+  }
   pool.query('SELECT * FROM detalle_pedidos WHERE pedido_id = $1', [id], (error, results) => {
     if (error) {
       throw error;
@@ -314,6 +322,11 @@ router.get('/verdetalle/:id', (req, res) => {
 // ../pedidos/page/{page}
 router.get('/page/:page', (req, res) => {
 	const { page } = req.params;
+	const idNumber = parseInt(page, 10);
+	if (isNaN(idNumber) || idNumber < 1) {
+		res.status(400).json({ mensaje: 'La página tiene que empezar por la 1.' });
+		return;
+	}
 	const pageAux = page - 1;
 	const limit = 6;
 	const offset = limit * pageAux;
