@@ -24,7 +24,6 @@ app.use('/categorias', categoriasRouter);
 app.use('/clientes', clientesRouter);
 app.use('/mercadopago', mercadoPagoRouter);
 
-
 // para iniciar el servidor usar node index.js
 app.listen(port, () => {
   console.log(`API running on http://localhost:${port}`);

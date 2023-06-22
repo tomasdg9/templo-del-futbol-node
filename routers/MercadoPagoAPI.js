@@ -32,55 +32,58 @@ router.post('/process_payment', (req, res) => {
     });
 });
 
-router.get('/obtener-preference-id', (req, res) => {
-  // Crea la preferencia de pago
-  const preferenceData = {
-    items: [
-      {
-        title: 'Producto de ejemplo',
-        quantity: 1,
-        currency_id: 'ARS',
-        unit_price: 100,
-      },
-    ],
-  };
-
-  mercadopago.preferences.create(preferenceData)
-    .then((response) => {
-      const preferenceId = response.body.id;
-      res.json({ preferenceId });
-    })
-    .catch((error) => {
-      console.error(error);
-      res.status(500).json({ error: 'Error al obtener el preferenceId' });
-    });
-});
-
-// Crear un objeto de preferencia
-router.post('/crear-preferencia', (req, res) => {
-    let preference = {
-    // el "purpose": "wallet_purchase" solo permite pagos registrados
-    // para permitir pagos de guests puede omitir esta propiedad
+router.post('/crear-preferencia', async (req, res) => {
+  const { email, ids, cantidad } = req.body;
+/*
+  if (!Array.isArray(ids)) {
+    return res.status(400).json({ error: 'La propiedad "ids" debe ser un arreglo' });
+  }
+*/
+  console.log('Antes de crear la preferencia');
+  let preference = {
     "purpose": "wallet_purchase",
-    "items": [
-      {
-        "id": "item-ID-1234",
-        "title": "Meu produto",
-        "quantity": 1,
-        "unit_price": 75.76
-      }
-    ]
+    "payer": {
+      "email": email
+    },
+    "back_urls": {
+      "success": "https://127.0.0.1:3000",
+      "failure": "https://127.0.0.1:3000/carrito",
+      "pending": "https://127.0.0.1:3000/carrito"
+    },
+    "items": [] // Inicializar items como un arreglo vacío
   };
-  
-  mercadopago.preferences.create(preference)
-    .then(function (response) {
-      // Este valor es el ID de preferencia que se enviará al ladrillo al inicio
-      const preferenceId = response.body.id;
-      res.json({preferenceId});
-    }).catch(function (error) {
-      console.log(error);
-      res.status(500).json({ error: 'Error al crear la preferencia' });
+
+  try {
+    const productPromises = ids.map(async (id) => {
+      const response = await axios.get(`/productos/${id}`);
+      const product = response.data;
+
+      const item = {
+        "id": product.id,
+        "title": product.nombre,
+        "quantity": 1,
+        "unit_price": product.precio
+      };
+
+      preference.items.push(item);
     });
-  });
+
+    await Promise.all(productPromises);
+
+    mercadopago.preferences.create(preference)
+      .then(function (response) {
+        console.log(response);
+        console.log("creando la preferencia")
+        const preferenceId = response.body.id;
+        res.json({ preferenceId });
+      }).catch(function (error) {
+        console.log(error);
+        res.status(500).json({ error: 'Error en api al crear la preferencia' });
+      });
+  } catch (error) {
+    console.error('Error al obtener los productos:', error);
+    res.status(500).json({ error: 'Error en api al obtener los productos' });
+  }
+});
 
   module.exports = router;
