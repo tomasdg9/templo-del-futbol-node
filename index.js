@@ -22,7 +22,7 @@ app.use('/pedidos', pedidosRouter);
 app.use('/productos', productosRouter);
 app.use('/categorias', categoriasRouter);
 app.use('/clientes', clientesRouter);
-app.use('/mercadopago', mercadoPagoRouter);
+app.use('/process_payment', mercadoPagoRouter);
 
 // para iniciar el servidor usar node index.js
 app.listen(port, () => {
