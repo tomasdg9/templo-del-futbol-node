@@ -2,12 +2,14 @@ const express = require('express');
 const router = express.Router();
 require('dotenv').config();
 const axios = require('axios');
+const { ACCESS_TOKEN } = require('../constants.js');
+
 
 // SDK de Mercado Pago
 const mercadopago = require("mercadopago");
 // Agrega credenciales
 mercadopago.configure({
-  access_token: process.env.ACCESS_TOKEN,
+  access_token: ACCESS_TOKEN,
 });
 
 // Ruta para procesar el pago con tarjeta
@@ -19,7 +21,7 @@ router.post('/process_payment', (req, res) => {
 
   axios.post('https://api.mercadopago.com/v1/payments', paymentData, {
     headers: {
-      Authorization: `Bearer ${process.env.ACCESS_TOKEN}`,
+      Authorization: `Bearer ${ACCESS_TOKEN}`,
     },
   })
     .then(function(response) {
