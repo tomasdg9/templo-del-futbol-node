@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
-
+const cors = require('cors');
 require('dotenv').config();
+router.use(cors());
 
 var mercadopago = require('mercadopago');
 mercadopago.configurations.setAccessToken(process.env.ACCESS_TOKEN);
