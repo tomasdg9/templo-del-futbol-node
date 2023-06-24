@@ -7,6 +7,13 @@ const { ACCESS_TOKEN } = require('../constants.js');
 
 var mercadopago = require('mercadopago');
 mercadopago.configurations.setAccessToken(ACCESS_TOKEN);
+// cors mp
+mercadopago.configure({
+		access_token: ACCESS_TOKEN,
+		access_control_allow_origin: '*',
+		access_control_allow_methods: 'GET, POST',
+		access_control_allow_headers: 'Authorization, Content-Type',
+});
 
 router.post('/', (req, res) => {
     mercadopago.payment.save(req.body)
