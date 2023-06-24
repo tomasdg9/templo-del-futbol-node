@@ -1,12 +1,17 @@
 const express = require('express');
 const router = express.Router();
 const cors = require('cors');
-const { ACCESS_TOKEN } = require('../constants.js');
+require('dotenv').config();
+router.use(cors());
+
 
 var mercadopago = require('mercadopago');
-mercadopago.configurations.setAccessToken(ACCESS_TOKEN);
+mercadopago.configurations.setAccessToken(process.env.ACCESS_TOKEN);
 
-// pide access token pero ya esta, por qué?
+// falta configurar esto
+mercadopago.configurations.setClientId(process.env.CLIENT_ID);
+mercadopago.configurations.setClientSecret(process.env.CLIENT_SECRET);
+
 mercadopago.configure({
   access_control_allow_origin: '*',
   access_control_allow_methods: 'GET, POST',
