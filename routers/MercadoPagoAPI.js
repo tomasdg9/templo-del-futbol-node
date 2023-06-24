@@ -3,9 +3,10 @@ const router = express.Router();
 const cors = require('cors');
 require('dotenv').config();
 router.use(cors());
+const { ACCESS_TOKEN } = require('../constants.js');
 
 var mercadopago = require('mercadopago');
-mercadopago.configurations.setAccessToken(process.env.ACCESS_TOKEN);
+mercadopago.configurations.setAccessToken(ACCESS_TOKEN);
 
 router.post('/', (req, res) => {
     mercadopago.payment.save(req.body)
