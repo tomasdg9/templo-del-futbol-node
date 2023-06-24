@@ -1,7 +1,5 @@
 const express = require('express');
 const cors = require('cors');
-const bodyParser = require('body-parser');
-
 
 /* Importa los router para la API */
 const productosRouter = require('./routers/ProductosAPI');
@@ -20,14 +18,11 @@ app.use(cors({
 }));
 
 app.use(express.json());
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(bodyParser.json());
 app.use('/pedidos', pedidosRouter);
-app.use('/process_payment', mercadoPagoRouter);
 app.use('/productos', productosRouter);
 app.use('/categorias', categoriasRouter);
 app.use('/clientes', clientesRouter);
-
+app.use('/process_payment', mercadoPagoRouter);
 
 // para iniciar el servidor usar node index.js
 app.listen(port, () => {
