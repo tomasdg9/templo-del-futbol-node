@@ -52,6 +52,7 @@ router.post('/crear/:token', (req, res) => {
 
   const { token } = req.params;
   const email = req.body.email;
+  const idmp = req.body.idMP;
 
   pool.connect((error, client, done) => {
     if (error) {
@@ -96,8 +97,8 @@ router.post('/crear/:token', (req, res) => {
 
         const descripcion = req.body.descripcion;
 		const fechaActual = new Date();
-        const pedidoQuery = 'INSERT INTO pedidos (email, descripcion, created_at, updated_at) VALUES ($1, $2, $3, $3) RETURNING id';
-        const pedidoParams = [email, descripcion, fechaActual];
+        const pedidoQuery = 'INSERT INTO pedidos (email, descripcion, idmp ,created_at, updated_at) VALUES ($1, $2, $4, $3, $3) RETURNING id';
+        const pedidoParams = [email, descripcion, fechaActual, idmp];
         client.query(pedidoQuery, pedidoParams, (error, pedidoResult) => {
           if (error) {
             client.query('ROLLBACK', (rollbackError) => {
