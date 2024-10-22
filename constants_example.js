@@ -3,7 +3,7 @@ const DB_USER = '';
 const DB_HOST = '';
 const DB_DATABASE = '';
 const DB_PASSWORD = '';
-const DB_PORT = ;
+const DB_PORT = '';
 
 // Variables para los mails
 const MAIL_SERVICE = '';
